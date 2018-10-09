@@ -2,20 +2,10 @@ import logging
 import serial
 import RPi.GPIO as GPIO
 
+from log import get_logger
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler('sms_900a_pi.log')
-fh.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-# create formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-# add the handlers to the logger
-logger.addHandler(fh)
-logger.addHandler(ch)
+
+logger = get_logger(__name__, logging.INFO)
 
 
 class SMSHandler:
@@ -29,7 +19,7 @@ class SMSHandler:
     # AT commands are instructions used to control a modem.
     # AT is the abbreviation of ATtention. Every command line starts with "AT" or "at".
     # And every commands must end with a carriage return character, in this case: "\r\n".
-# Common AT commands:
+    # Common AT commands:
     STATUS_COMMAND = "AT"  # Check device status. Example: OK/ERROR
     MANUFACTURER_COMMAND = "AT+CMGI"  # Name of manufacturer. Example: SIMCOM_Ltd
     MODULE_NUMBER_COMMAND = "AT+CGMM"  # Example: SIMCOM_SIM900A
@@ -43,17 +33,18 @@ class SMSHandler:
         self.modem = serial.Serial(port, baudrate, timeout=timeout)
 
     def response(self):
-        resp = self.modem.readline()
+        resp = self.modem.read_all()
         try:
             return resp.decode('utf8')
         except Exception as e:
+            logger.error(e)
             logger.debug(resp)
             return resp.decode('utf8', "ignore")
 
     def send_command(self, command):
         command = command + "\r\n"
         self.modem.write(command.encode())
-        logger.debug(self.response())
+        logger.debug("Send command: {}".format(command))
 
     def set_text_mode(self):
         self.send_command(self.MESSAGE_FORMAT_COMMAND + "=1")   # AT+CMGF=1
@@ -68,6 +59,6 @@ class SMSHandler:
     def set_echo(self, status='0'):
         self.send_command(self.ECHO_COMMAND + status)  # ATE0
 
-    def subscribe(self, params='3,1,0,0,0'):
+    def subscribe(self, params='3,2,0,0,0'):
         self.send_command(self.SUBSCRIBE_SMS_COMMAND + "={}".format(params))  # AT+CNMI=3,1,0,0,0
 
