@@ -33,9 +33,13 @@ class SMSHandler:
         self.modem = serial.Serial(port, baudrate, timeout=timeout)
 
     def response(self):
-        resp = self.modem.read_all()
+        msg = b''
+        while self.modem.in_waiting > 0:
+            msg += self.modem.read(self.modem.in_waiting)
+
+        resp = msg
         try:
-            return resp.decode('utf8')
+            return resp.decode('utf8', 'ignore')
         except Exception as e:
             logger.error(e)
             logger.debug(resp)
